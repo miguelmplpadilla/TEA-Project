@@ -11,23 +11,36 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@rn-primitives/select": "^1.4.0",
+    "@rn-primitives/slot": "^1.4.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "expo": "latest",
     "expo-constants": "latest",
     "expo-linking": "latest",
     "expo-router": "latest",
     "expo-status-bar": "latest",
+    "firebase": "^12.13.0",
+    "lucide-react-native": "^1.14.0",
+    "nativewind": "^4.2.3",
     "react": "latest",
     "react-dom": "latest",
     "react-native": "latest",
+    "react-native-reanimated": "^4.3.1",
     "react-native-safe-area-context": "latest",
     "react-native-screens": "latest",
-    "react-native-web": "latest"
+    "react-native-svg": "^15.15.4",
+    "react-native-web": "latest",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@babel/core": "latest",
     "@types/react": "latest",
+    "@types/react-native": "^0.72.8",
     "eslint": "latest",
     "eslint-config-expo": "latest",
+    "prettier-plugin-tailwindcss": "^0.5.14",
+    "tailwindcss": "^3.4.19",
     "typescript": "latest"
   }
 }

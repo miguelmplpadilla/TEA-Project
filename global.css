@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 100 27% 96%;
+  --foreground: 140 17% 8%;
+  --muted: 120 18% 94%;
+  --muted-foreground: 136 9% 43%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 140 17% 8%;
+  --border: 129 14% 88%;
+  --input: 129 14% 88%;
+  --ring: 145 24% 17%;
+  --accent: 130 17% 92%;
+  --accent-foreground: 145 24% 17%;
+  --destructive: 0 84% 60%;
+}

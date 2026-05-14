@@ -1,7 +1,10 @@
-import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import {FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
 import { PostCard } from '@/components/PostCard';
 import type { Post } from '@/types/post';
+import {FooterApp} from "@/components/Footer";
+import { signOut } from 'firebase/auth';
+import { getFirebaseAuth } from '@/services/firebase';
 
 const posts: Post[] = [
   {
@@ -40,6 +43,10 @@ const posts: Post[] = [
 ];
 
 export default function Index() {
+  async function logout() {
+    await signOut(getFirebaseAuth());
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
@@ -55,9 +62,13 @@ export default function Index() {
             <Text style={styles.subtitle}>
               Preguntas, respuestas y conversaciones abiertas de la comunidad.
             </Text>
+            <TouchableOpacity onPress={logout}>
+              <Text>Cerrar sesión</Text>
+            </TouchableOpacity>
           </View>
         }
       />
+      <FooterApp/>
     </SafeAreaView>
   );
 }
@@ -94,7 +105,22 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: 8
   },
+  registerButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#20352b',
+    borderRadius: 8,
+    justifyContent: 'center',
+    marginTop: 16,
+    minHeight: 44,
+    paddingHorizontal: 16
+  },
+  registerButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800'
+  },
   separator: {
     height: 12
-  }
+  },
 });
