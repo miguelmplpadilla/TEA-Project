@@ -1,8 +1,52 @@
-import {StyleSheet, TouchableOpacity, View} from 'react-native';
+import {useCallback, useState} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Ionicons} from "@expo/vector-icons";
-import { router } from 'expo-router';
+import {router, useFocusEffect, usePathname} from 'expo-router';
+
+import {getFirebaseAuth} from '@/services/firebase';
+import {getUnreadActivityCount} from '@/services/users';
 
 export function FooterApp() {
+  const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+  const pathname = usePathname();
+  const shouldShowActivityBadge =
+    pathname !== '/Replies' &&
+    pathname !== '/FriendRequests' &&
+    unreadActivityCount > 0;
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadUnreadRepliesCount() {
+        const authUser = getFirebaseAuth().currentUser;
+
+        if (!authUser) {
+          setUnreadActivityCount(0);
+          return;
+        }
+
+        try {
+          const nextUnreadActivityCount = await getUnreadActivityCount(authUser.uid);
+
+          if (isActive) {
+            setUnreadActivityCount(nextUnreadActivityCount);
+          }
+        } catch {
+          if (isActive) {
+            setUnreadActivityCount(0);
+          }
+        }
+      }
+
+      loadUnreadRepliesCount();
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
+
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
       <View style={styles.footer}>
@@ -10,8 +54,18 @@ export function FooterApp() {
                           onPress={() => router.push('/')}>
           <Ionicons name="home" style={styles.footerButtonText}></Ionicons>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerButton}>
+        <TouchableOpacity
+          style={styles.footerButton}
+          onPress={() => router.push('/Replies')}
+        >
           <Ionicons name="heart" style={styles.footerButtonText}></Ionicons>
+          {shouldShowActivityBadge ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
+              </Text>
+            </View>
+          ) : null}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.footerPostButton}
@@ -60,6 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#444',
     justifyContent: 'center',
+    position: 'relative',
   },
 
   footerPostButton: {
@@ -78,5 +133,24 @@ const styles = StyleSheet.create({
     tintColor: 'white',
     textAlign: 'center',
     fontSize: 20
+  },
+  badge: {
+    alignItems: 'center',
+    backgroundColor: '#c73b33',
+    borderColor: '#ffffff',
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    position: 'absolute',
+    right: 8,
+    top: 4,
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
   },
 });

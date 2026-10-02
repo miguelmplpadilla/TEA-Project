@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import {forwardRef, useCallback, useEffect, useImperativeHandle, useState} from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,82 +12,61 @@ import {
   View,
 } from 'react-native';
 
-import { getAuthErrorMessage, registerWithEmail } from '@/services/auth';
-import { hasFirebaseConfig, missingFirebaseConfigKeys } from '@/services/firebase';
-import type { OnboardingProfile } from '@/services/users';
+import {getAuthErrorMessage, loginWithEmail} from '@/services/auth';
+import {hasFirebaseConfig, missingFirebaseConfigKeys} from '@/services/firebase';
 
-export type RegisterHandle = {
+export type LoginHandle = {
   submit: () => void;
 };
 
-type RegisterState = {
+type LoginState = {
   canSubmit: boolean;
   isSubmitting: boolean;
 };
 
-type RegisterProps = {
+type LoginFormProps = {
   showSubmitButton?: boolean;
-  onboardingProfile?: OnboardingProfile;
-  onStateChange?: (state: RegisterState) => void;
+  onStateChange?: (state: LoginState) => void;
 };
 
-function Register(
-  { showSubmitButton = true, onboardingProfile, onStateChange}: RegisterProps,
-  ref: React.Ref<RegisterHandle>,
+function LoginForm(
+  {showSubmitButton = true, onStateChange}: LoginFormProps,
+  ref: React.Ref<LoginHandle>,
 ) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit =
-      hasFirebaseConfig &&
-      email.trim().length > 0 &&
-      password.length >= 6 &&
-      confirmPassword.length >= 6 &&
-      !isSubmitting;
+    hasFirebaseConfig &&
+    email.trim().length > 0 &&
+    password.length >= 6 &&
+    !isSubmitting;
 
-  const handleRegister = useCallback(async () => {
+  const handleLogin = useCallback(async () => {
     if (!canSubmit) {
       return;
     }
 
     setError('');
-    setSuccessMessage('');
-
-    if (password !== confirmPassword) {
-      setError('Las contrasenas no coinciden.');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const user = await registerWithEmail({
-        email,
-        password,
-        profile: onboardingProfile,
-      });
-
-      setSuccessMessage(`Cuenta creada para ${user.email}. UID: ${user.uid}`);
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-    } catch (registerError) {
-      setError(getAuthErrorMessage(registerError));
+      await loginWithEmail({email, password});
+    } catch (loginError) {
+      setError(getAuthErrorMessage(loginError));
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, confirmPassword, email, onboardingProfile, password]);
+  }, [canSubmit, email, password]);
 
   useImperativeHandle(ref, () => ({
-    submit: handleRegister,
-  }), [handleRegister]);
+    submit: handleLogin,
+  }), [handleLogin]);
 
   useEffect(() => {
-    onStateChange?.({ canSubmit, isSubmitting });
+    onStateChange?.({canSubmit, isSubmitting});
   }, [canSubmit, isSubmitting, onStateChange]);
 
   return (
@@ -99,15 +78,13 @@ function Register(
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.header}>
             <Text style={styles.eyebrow}>TEARS</Text>
-            <Text style={styles.title}>Crear cuenta</Text>
-            <Text style={styles.subtitle}>
-              Crea tu cuenta con email y contrasena. Tu perfil se guardara al terminar.
-            </Text>
+            <Text style={styles.title}>Iniciar sesion</Text>
+            <Text style={styles.subtitle}>Entra con el email y la contrasena de tu cuenta.</Text>
           </View>
 
           {!hasFirebaseConfig && (
             <View style={styles.warningBox}>
-              <Text style={styles.warningTitle}>Configura Firebase para probar el registro</Text>
+              <Text style={styles.warningTitle}>Configura Firebase para probar el login</Text>
               <Text style={styles.warningText}>
                 Faltan estas variables en `.env`: {missingFirebaseConfigKeys.join(', ')}.
               </Text>
@@ -132,41 +109,28 @@ function Register(
             <View style={styles.field}>
               <Text style={styles.label}>Contrasena</Text>
               <TextInput
-                placeholder="Minimo 6 caracteres"
+                placeholder="Tu contrasena"
                 secureTextEntry
                 style={styles.input}
-                textContentType="newPassword"
+                textContentType="password"
                 value={password}
                 onChangeText={setPassword}
               />
             </View>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Repetir contrasena</Text>
-              <TextInput
-                placeholder="Repite la contrasena"
-                secureTextEntry
-                style={styles.input}
-                textContentType="newPassword"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-            </View>
-
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
 
             {showSubmitButton && (
               <TouchableOpacity
                 activeOpacity={0.82}
                 disabled={!canSubmit}
                 style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
-                onPress={handleRegister}
+                onPress={handleLogin}
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Registrarme</Text>
+                  <Text style={styles.submitButtonText}>Entrar</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -177,7 +141,7 @@ function Register(
   );
 }
 
-export default forwardRef(Register);
+export default forwardRef(LoginForm);
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -188,16 +152,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    alignSelf: 'center',
     flexGrow: 1,
+    maxWidth: 420,
     padding: 20,
     paddingBottom: 36,
     width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
   },
   header: {
-    marginTop: 15,
     marginBottom: 24,
+    marginTop: 15,
   },
   eyebrow: {
     color: '#526057',
@@ -265,12 +229,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#a33b30',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  successText: {
-    color: '#1e6a45',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,

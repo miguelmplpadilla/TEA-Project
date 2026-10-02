@@ -17,6 +17,7 @@
     "clsx": "^2.1.1",
     "expo": "latest",
     "expo-constants": "latest",
+    "expo-image-picker": "~55.0.20",
     "expo-linking": "latest",
     "expo-router": "latest",
     "expo-status-bar": "latest",

@@ -1,60 +1,130 @@
-import {FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {FirebaseError} from 'firebase/app';
+import {signOut} from 'firebase/auth';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  PanResponder,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { PostCard } from '@/components/PostCard';
-import type { Post } from '@/types/post';
-import {FooterApp} from "@/components/Footer";
-import { signOut } from 'firebase/auth';
-import { getFirebaseAuth } from '@/services/firebase';
-
-const posts: Post[] = [
-  {
-    id: '1',
-    author: 'Laura Garcia',
-    handle: '@laurag',
-    createdAt: 'hace 12 min',
-    title: 'Como organizais vuestras tareas cuando teneis varias entregas?',
-    body: 'Estoy probando listas semanales, pero siento que pierdo contexto rapido. Me interesa saber que sistemas os funcionan en el dia a dia.',
-    commentCount: 18,
-    score: 42,
-    tags: ['Productividad', 'Consejos']
-  },
-  {
-    id: '2',
-    author: 'Miguel Torres',
-    handle: '@miguelt',
-    createdAt: 'hace 34 min',
-    title: 'Que stack usariais para una app social pequena?',
-    body: 'Estoy montando una app tipo foro con publicaciones y respuestas. Busco algo sencillo para empezar, pero que no se quede corto pronto.',
-    commentCount: 27,
-    score: 61,
-    tags: ['React Native', 'Backend']
-  },
-  {
-    id: '3',
-    author: 'Nadia Romero',
-    handle: '@nadia',
-    createdAt: 'hace 1 h',
-    title: 'Como moderariais contenido sin crear comunidades?',
-    body: 'Si todo vive en un feed unico, me preocupa como destacar buenas respuestas y evitar ruido sin complicar demasiado la experiencia.',
-    commentCount: 9,
-    score: 24,
-    tags: ['Moderacion', 'UX']
-  }
-];
+import {FooterApp} from '@/components/Footer';
+import {PostCard} from '@/components/PostCard';
+import {getFirebaseAuth} from '@/services/firebase';
+import {getPublications, type Publication} from '@/services/users';
 
 export default function Index() {
+  const [posts, setPosts] = useState<Publication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [error, setError] = useState('');
+  const scrollYRef = useRef(0);
+
+  const loadPosts = useCallback(async ({refreshing = false}: {refreshing?: boolean} = {}) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    setError('');
+
+    try {
+      const publications = await getPublications();
+      setPosts(publications);
+    } catch (loadError) {
+      if (loadError instanceof FirebaseError) {
+        setError(`No se pudieron cargar las publicaciones. Firebase: ${loadError.code}.`);
+        return;
+      }
+
+      setError('No se pudieron cargar las publicaciones.');
+    } finally {
+      if (refreshing) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  const refreshPosts = useCallback(() => {
+    if (!isRefreshing && !isLoading) {
+      loadPosts({refreshing: true});
+    }
+  }, [isLoading, isRefreshing, loadPosts]);
+
+  const webPullResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Platform.OS === 'web' &&
+          scrollYRef.current <= 0 &&
+          gestureState.dy > 14 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderMove: (_, gestureState) => {
+          if (gestureState.dy > 0) {
+            setPullDistance(Math.min(gestureState.dy, 96));
+          }
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy >= 64) {
+            refreshPosts();
+          }
+
+          setPullDistance(0);
+        },
+        onPanResponderTerminate: () => setPullDistance(0),
+      }),
+    [refreshPosts],
+  );
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    scrollYRef.current = event.nativeEvent.contentOffset.y;
+  }
+
   async function logout() {
     await signOut(getFirebaseAuth());
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} {...webPullResponder.panHandlers}>
+      {Platform.OS === 'web' && pullDistance > 0 ? (
+        <View style={[styles.webPullIndicator, {height: pullDistance}]}>
+          {pullDistance >= 64 ? (
+            <Text style={styles.webPullText}>Suelta para actualizar</Text>
+          ) : (
+            <Text style={styles.webPullText}>Desliza para actualizar</Text>
+          )}
+        </View>
+      ) : null}
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PostCard post={item} />}
+        renderItem={({item}) => <PostCard post={item} />}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        alwaysBounceVertical
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          Platform.OS !== 'web' ? (
+            <RefreshControl refreshing={isRefreshing} onRefresh={refreshPosts} />
+          ) : undefined
+        }
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.eyebrow}>TEARS</Text>
@@ -63,12 +133,19 @@ export default function Index() {
               Preguntas, respuestas y conversaciones abiertas de la comunidad.
             </Text>
             <TouchableOpacity onPress={logout}>
-              <Text>Cerrar sesión</Text>
+              <Text>Cerrar sesion</Text>
             </TouchableOpacity>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {isLoading ? <ActivityIndicator color="#20352b" style={styles.loader} /> : null}
           </View>
         }
+        ListEmptyComponent={
+          !isLoading && !error ? (
+            <Text style={styles.emptyText}>Todavia no hay publicaciones.</Text>
+          ) : null
+        }
       />
-      <FooterApp/>
+      <FooterApp />
     </SafeAreaView>
   );
 }
@@ -105,22 +182,31 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: 8
   },
-  registerButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#20352b',
-    borderRadius: 8,
-    justifyContent: 'center',
-    marginTop: 16,
-    minHeight: 44,
-    paddingHorizontal: 16
-  },
-  registerButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800'
-  },
   separator: {
     height: 12
+  },
+  loader: {
+    marginTop: 16
+  },
+  errorText: {
+    color: '#a33b30',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 12
+  },
+  emptyText: {
+    color: '#65736a',
+    fontSize: 14,
+    lineHeight: 20
+  },
+  webPullIndicator: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  webPullText: {
+    color: '#526057',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

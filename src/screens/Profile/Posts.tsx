@@ -1,55 +1,44 @@
 import {StyleSheet, Text, View} from 'react-native';
 import {PostCard} from "@/components/PostCard";
-import type {Post} from "@/types/post";
+import {getPublications, type Publication} from '@/services/users';
+import {useEffect, useState} from "react";
+import {UserNameWithDiagnosis} from '@/components/UserNameWithDiagnosis';
+import type {TeaDiagnosis} from '@/constants/teaDiagnosis';
 
-export function Posts() {
+type PostsProps = {
+    userName: string;
+    teaDiagnosis?: TeaDiagnosis;
+};
 
-    const posts: Post[] = [
-        {
-            id: '1',
-            author: 'Miguel Padilla',
-            handle: '@miguelp',
-            createdAt: 'hace 12 min',
-            title: 'Como organizais vuestras tareas cuando teneis varias entregas?',
-            body: 'Estoy probando listas semanales, pero siento que pierdo contexto rapido. Me interesa saber que sistemas os funcionan en el dia a dia.',
-            commentCount: 18,
-            score: 42,
-            tags: ['Productividad', 'Consejos']
-        },
-        {
-            id: '2',
-            author: 'Miguel Padilla',
-            handle: '@miguelp',
-            createdAt: 'hace 34 min',
-            title: 'Que stack usariais para una app social pequena?',
-            body: 'Estoy montando una app tipo foro con publicaciones y respuestas. Busco algo sencillo para empezar, pero que no se quede corto pronto.',
-            commentCount: 27,
-            score: 61,
-            tags: ['React Native', 'Backend']
-        },
-        {
-            id: '3',
-            author: 'Miguel Padilla',
-            handle: '@miguelp',
-            createdAt: 'hace 1 h',
-            title: 'Como moderariais contenido sin crear comunidades?',
-            body: 'Si todo vive en un feed unico, me preocupa como destacar buenas respuestas y evitar ruido sin complicar demasiado la experiencia.',
-            commentCount: 9,
-            score: 24,
-            tags: ['Moderacion', 'UX']
+export function Posts({userName, teaDiagnosis}: PostsProps) {
+    const [publications, setPublications] = useState<Publication[]>([]);
+
+    useEffect(() => {
+        async function GetPublications() {
+            const value = await getPublications();
+            setPublications(value);
         }
-    ];
+
+        GetPublications();
+    }, []);
+
 
     return (
         <View style={styles.listContent}>
             <View style={styles.header}>
-                <Text style={styles.title}>Tus publicaciones</Text>
+                <Text style={styles.title}>Publicaciones de</Text>
+                <UserNameWithDiagnosis
+                    userName={userName}
+                    teaDiagnosis={teaDiagnosis}
+                    size="large"
+                    nameStyle={styles.title}
+                />
             </View>
 
-            {posts.map((post, index) => (
+            {publications.map((post, index) => (
                 <View key={post.id}>
                     <PostCard post={post} />
-                    {index < posts.length - 1 && <View style={styles.separator} />}
+                    {index < publications.length - 1 && <View style={styles.separator} />}
                 </View>
             ))}
         </View>

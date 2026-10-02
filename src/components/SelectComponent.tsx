@@ -15,6 +15,7 @@ type SelectComponentProps = {
     onValueChange?: (options: SelectOption[]) => void;
     contentItemsSize?: number;
     maxItemsSelect?: number;
+    optionsLayout?: 'chips' | 'list';
 };
 
 const SELECTED_LABEL_MAX_LENGTH = 10;
@@ -33,7 +34,8 @@ export function SelectComponent({
     placeholder = 'Buscar opciones',
     onValueChange,
     contentItemsSize = 150,
-    maxItemsSelect = 10000
+    maxItemsSelect = 10000,
+    optionsLayout = 'chips',
 }: SelectComponentProps) {
     const [search, setSearch] = useState('');
 
@@ -96,45 +98,52 @@ export function SelectComponent({
                 </View>
             )}
 
-            <ScrollView
-                style={[styles.optionsScroll, {maxHeight: contentItemsSize}]}
-                contentContainerStyle={styles.options}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled
-                showsVerticalScrollIndicator
-            >
-                {filteredOptions.map((option) => {
-                    const isSelected = selectedValues.has(option.value);
+            <View style={[styles.optionsViewport, {height: contentItemsSize}]}>
+                <ScrollView
+                    style={styles.optionsScroll}
+                    contentContainerStyle={[
+                        styles.options,
+                        optionsLayout === 'list' && styles.listOptions,
+                    ]}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                    scrollEnabled
+                    showsVerticalScrollIndicator
+                >
+                    {filteredOptions.map((option) => {
+                        const isSelected = selectedValues.has(option.value);
 
-                    return (
-                        <TouchableOpacity
-                            key={option.value}
-                            activeOpacity={0.78}
-                            style={[
-                                styles.option,
-                                isSelected && styles.selectedOption,
-                            ]}
-                            onPress={() => toggleOption(option)}
-                        >
-                            <Text
+                        return (
+                            <TouchableOpacity
+                                key={option.value}
+                                activeOpacity={0.78}
                                 style={[
-                                    styles.optionText,
-                                    isSelected && styles.selectedOptionText,
+                                    styles.option,
+                                    optionsLayout === 'list' && styles.listOption,
+                                    isSelected && styles.selectedOption,
                                 ]}
+                                onPress={() => toggleOption(option)}
                             >
-                                {option.label}
-                            </Text>
-                            {isSelected && (
-                                <Icon as={Check} color="#ffffff" size={16} />
-                            )}
-                        </TouchableOpacity>
-                    );
-                })}
+                                <Text
+                                    style={[
+                                        styles.optionText,
+                                        isSelected && styles.selectedOptionText,
+                                    ]}
+                                >
+                                    {option.label}
+                                </Text>
+                                {isSelected && (
+                                    <Icon as={Check} color="#ffffff" size={16} />
+                                )}
+                            </TouchableOpacity>
+                        );
+                    })}
 
-                {filteredOptions.length === 0 && (
-                    <Text style={styles.emptyText}>No hay opciones</Text>
-                )}
-            </ScrollView>
+                    {filteredOptions.length === 0 && (
+                        <Text style={styles.emptyText}>No hay opciones</Text>
+                    )}
+                </ScrollView>
+            </View>
         </View>
     );
 }
@@ -193,7 +202,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         width: 18,
     },
+    optionsViewport: {
+        flexGrow: 0,
+        marginTop: 8,
+        overflow: 'hidden',
+        width: '100%',
+    },
     optionsScroll: {
+        flex: 1,
+        minHeight: 0,
         paddingRight: 4,
         width: '100%',
     },
@@ -202,6 +219,9 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: 8,
         paddingBottom: 2,
+    },
+    listOptions: {
+        flexDirection: 'column',
     },
     option: {
         alignItems: 'center',
@@ -213,6 +233,10 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 7,
+    },
+    listOption: {
+        justifyContent: 'space-between',
+        width: '100%',
     },
     selectedOption: {
         backgroundColor: '#20352b',
